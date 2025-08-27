@@ -1,41 +1,17 @@
-import yahooFinance from "yahoo-finance2";
-import { request } from "undici";
+import { fetchStockPrices, fetchCryptoPrices } from "../../../lib/priceAPI";
 
 export async function GET(req) {
   try {
     const url = new URL(req.url);
-    const stocksParam = url.searchParams.get("stocks"); // ตัวอย่าง: AAPL,XAUUSD=X
-    const cryptoParam = url.searchParams.get("crypto"); // ตัวอย่าง: bitcoin,ethereum
+    const stocksParam = url.searchParams.get("stocks");
+    const cryptoParam = url.searchParams.get("crypto");
 
-    // ---- Parse symbols ----
     const stocks = stocksParam ? stocksParam.split(",") : [];
     const cryptos = cryptoParam ? cryptoParam.split(",") : [];
 
-    // ---- Fetch stocks/commodities from Yahoo Finance ----
-    let stockQuotes = [];
-    if (stocks.length > 0) {
-      stockQuotes = await yahooFinance.quote(stocks);
-      // ถ้า symbol เดียว yahooFinance.quote คืน object แทน array
-      if (!Array.isArray(stockQuotes)) stockQuotes = [stockQuotes];
-      stockQuotes = stockQuotes.map((q) => ({
-        symbol: q.symbol,
-        price: q.regularMarketPrice,
-        currency: q.currency,
-      }));
-    }
+    const stockQuotes = await fetchStockPrices(stocks);
+    const cryptoPrices = await fetchCryptoPrices(cryptos);
 
-    // ---- Fetch crypto from CoinGecko ----
-    let cryptoPrices = {};
-    if (cryptos.length > 0) {
-      const { body } = await request(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(
-          cryptos.join(",")
-        )}&vs_currencies=usd`
-      );
-      cryptoPrices = await body.json();
-    }
-
-    // ---- Return combined result ----
     const result = {
       stocks: stockQuotes,
       crypto: cryptoPrices,
