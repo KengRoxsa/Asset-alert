@@ -1,4 +1,5 @@
-import { fetchGoldPrice } from "../../../lib/priceAPI";
+"use server";
+import { fetchGoldPrice } from "../../../lib/fetchGoldServer";
 
 export async function GET() {
   try {

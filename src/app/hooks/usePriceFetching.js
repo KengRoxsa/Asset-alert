@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 
 const usePriceFetching = (stocks, crypto) => {
@@ -41,3 +43,4 @@ const usePriceFetching = (stocks, crypto) => {
 };
 
 export default usePriceFetching;
+

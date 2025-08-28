@@ -1,8 +1,12 @@
-
+// lib/priceAPI.js
 import yahooFinance from "yahoo-finance2";
 import { request } from "undici";
-import puppeteer from "puppeteer";
+import chromium from "@sparticuz/chromium"; // Changed import
+import puppeteer from "puppeteer-core";
 
+/**
+ * ดึงราคาหุ้น
+ */
 export async function fetchStockPrices(stocks) {
   if (!stocks || stocks.length === 0) return [];
   let stockQuotes = await yahooFinance.quote(stocks);
@@ -14,6 +18,9 @@ export async function fetchStockPrices(stocks) {
   }));
 }
 
+/**
+ * ดึงราคา crypto
+ */
 export async function fetchCryptoPrices(cryptos) {
   if (!cryptos || cryptos.length === 0) return {};
   const { body } = await request(
@@ -24,26 +31,33 @@ export async function fetchCryptoPrices(cryptos) {
   return await body.json();
 }
 
+/**
+ * ดึงราคาทอง
+ */
 export async function fetchGoldPrice() {
-  const url = process.env.GOLD_PRICE_URL;
-  const browser = await puppeteer.launch({ headless: "new" });
-  const page = await browser.newPage();
-  await page.setUserAgent(
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-  );
-  await page.goto(url, { waitUntil: "networkidle2" });
-  await page.waitForFunction(
-    () => {
+  const browser = await puppeteer.launch({
+    args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
+    executablePath: await chromium.executablePath(), // <-- แก้ตรงนี้
+    headless: chromium.headless,
+  });
+
+  try {
+    const page = await browser.newPage();
+    await page.goto(process.env.GOLD_PRICE_URL, { waitUntil: "networkidle2" });
+
+    await page.waitForFunction(() => {
       const el = document.querySelector("span.last-change.ng-binding");
       return el && el.textContent.trim() !== "";
-    },
-    { timeout: 15000 }
-  );
-  const priceText = await page.$eval(
-    "span.last-change.ng-binding",
-    (el) => el.textContent.trim()
-  );
-  await browser.close();
-  const price = parseFloat(priceText.replace(/,/g, ""));
-  return { price, currency: "USD" };
+    }, { timeout: 15000 });
+
+    const priceText = await page.$eval(
+      "span.last-change.ng-binding",
+      el => el.textContent.trim()
+    );
+
+    return { price: parseFloat(priceText.replace(/,/g, "")), currency: "USD" };
+  } finally {
+    await browser.close();
+  }
 }

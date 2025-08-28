@@ -1,3 +1,4 @@
+"use server";
 import axios from "axios";
 import { fetchStockPrices, fetchCryptoPrices, fetchGoldPrice } from "../../../lib/priceAPI";
 

@@ -1,3 +1,4 @@
+"use server";
 import { fetchStockPrices, fetchCryptoPrices } from "../../../lib/priceAPI";
 
 export async function GET(req) {
