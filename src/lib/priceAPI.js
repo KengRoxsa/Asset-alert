@@ -1,8 +1,7 @@
 // lib/priceAPI.js
 import yahooFinance from "yahoo-finance2";
 import { request } from "undici";
-import chromium from "@sparticuz/chromium"; // Changed import
-import puppeteer from "puppeteer-core";
+import axios from "axios"; // Added axios
 
 /**
  * ดึงราคาหุ้น
@@ -35,29 +34,13 @@ export async function fetchCryptoPrices(cryptos) {
  * ดึงราคาทอง
  */
 export async function fetchGoldPrice() {
-  const browser = await puppeteer.launch({
-    args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath(), // <-- แก้ตรงนี้
-    headless: chromium.headless,
-  });
-
   try {
-    const page = await browser.newPage();
-    await page.goto(process.env.GOLD_PRICE_URL, { waitUntil: "networkidle2" });
-
-    await page.waitForFunction(() => {
-      const el = document.querySelector("span.last-change.ng-binding");
-      return el && el.textContent.trim() !== "";
-    }, { timeout: 15000 });
-
-    const priceText = await page.$eval(
-      "span.last-change.ng-binding",
-      el => el.textContent.trim()
-    );
-
-    return { price: parseFloat(priceText.replace(/,/g, "")), currency: "USD" };
-  } finally {
-    await browser.close();
+    const response = await axios.get(process.env.GOLD_PRICE_URL);
+    const data = response.data;
+    // Assuming the API returns data like { "price": 1900.00, "currency": "USD" }
+    return { price: data.price, currency: data.currency };
+  } catch (error) {
+    console.error("Error fetching gold price from API:", error);
+    return { price: null, currency: null };
   }
 }
