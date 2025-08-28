@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
-    "start": "next start",
-    "vercel-build": "npx @sparticuz/chromium install"
+    "start": "next start"
+    
   },
   "dependencies": {
     "@sparticuz/chromium": "^138.0.2",
