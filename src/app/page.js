@@ -6,29 +6,28 @@ import CryptoSearch from "./components/CryptoSearch";
 import PriceCard from "./components/PriceCard";
 
 export default function HomePage() {
-  const [stocks, setStocks] = useState(() => {
+  const [stocks, setStocks] = useState([]);
+  const [crypto, setCrypto] = useState(["bitcoin", "ethereum", "dogecoin"]);
+
+  // Hydrate from localStorage on mount
+  useEffect(() => {
     try {
-      const saved = localStorage.getItem("stocks");
-      return saved ? JSON.parse(saved) : [];
+      const savedStocks = localStorage.getItem("stocks");
+      if (savedStocks) setStocks(JSON.parse(savedStocks));
+
+      const savedCrypto = localStorage.getItem("crypto");
+      if (savedCrypto) setCrypto(JSON.parse(savedCrypto));
     } catch (error) {
-      console.error("Error parsing stocks from localStorage", error);
-      return [];
+      console.error("Error hydrating from localStorage", error);
     }
-  });
-  const [crypto, setCrypto] = useState(() => {
-    try {
-      const saved = localStorage.getItem("crypto");
-      return saved ? JSON.parse(saved) : ["bitcoin", "ethereum", "dogecoin"];
-    } catch (error) {
-      console.error("Error parsing crypto from localStorage", error);
-      return ["bitcoin", "ethereum", "dogecoin"];
-    }
-  });
+  }, []);
 
   const { prices, goldPrice, fetchPrices, fetchGoldPrice } = usePriceFetching(stocks, crypto);
 
   useEffect(() => {
-    localStorage.setItem("stocks", JSON.stringify(stocks));
+    if (stocks.length > 0) {
+      localStorage.setItem("stocks", JSON.stringify(stocks));
+    }
   }, [stocks]);
 
   useEffect(() => {

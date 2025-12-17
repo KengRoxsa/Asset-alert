@@ -45,12 +45,15 @@ const StockSearch = ({ stocks, setStocks, removeStock }) => {
         )}
       </div>
       <div className="flex flex-wrap gap-2 mb-2">
-        {stocks.map(s => (
-          <span key={s} className="bg-white border text-black px-3 py-1 rounded flex items-center gap-2 shadow-sm">
-            {s}
-            <button onClick={() => removeStock(s)} className="font-bold text-red-500">x</button>
-          </span>
-        ))}
+        {stocks.map(s => {
+          const symbol = typeof s === 'object' ? s.symbol : s;
+          return (
+            <span key={symbol} className="bg-white border text-black px-3 py-1 rounded flex items-center gap-2 shadow-sm">
+              {symbol}
+              <button onClick={() => removeStock(symbol)} className="font-bold text-red-500">x</button>
+            </span>
+          );
+        })}
       </div>
     </div>
   );

@@ -1,6 +1,9 @@
 "use server";
 import axios from "axios";
-import { fetchStockPrices, fetchCryptoPrices, fetchGoldPrice } from "../../../lib/priceAPI";
+import { fetchStockPrices, fetchCryptoPrices } from "../../../lib/priceAPI";
+import { fetchGoldPrice } from "../../../lib/fetchGoldServer";
+
+export const maxDuration = 60;
 
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL;
 
