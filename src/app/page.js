@@ -4,10 +4,12 @@ import usePriceFetching from "./hooks/usePriceFetching";
 import StockSearch from "./components/StockSearch";
 import CryptoSearch from "./components/CryptoSearch";
 import PriceCard from "./components/PriceCard";
+import DiscordNotifier from "./components/DiscordNotifier";
 
 export default function HomePage() {
   const [stocks, setStocks] = useState([]);
   const [crypto, setCrypto] = useState(["bitcoin", "ethereum", "dogecoin"]);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   // Hydrate from localStorage on mount
   useEffect(() => {
@@ -19,20 +21,27 @@ export default function HomePage() {
       if (savedCrypto) setCrypto(JSON.parse(savedCrypto));
     } catch (error) {
       console.error("Error hydrating from localStorage", error);
+    } finally {
+      setIsHydrated(true);
     }
   }, []);
 
-  const { prices, goldPrice, fetchPrices, fetchGoldPrice } = usePriceFetching(stocks, crypto);
+  const { prices, goldPrice, loading, loadingGold, fetchPrices, fetchGoldPrice } = usePriceFetching(
+    isHydrated ? stocks : [],
+    isHydrated ? crypto : []
+  );
 
   useEffect(() => {
-    if (stocks.length > 0) {
+    if (isHydrated && stocks.length > 0) {
       localStorage.setItem("stocks", JSON.stringify(stocks));
     }
-  }, [stocks]);
+  }, [stocks, isHydrated]);
 
   useEffect(() => {
-    localStorage.setItem("crypto", JSON.stringify(crypto));
-  }, [crypto]);
+    if (isHydrated) {
+      localStorage.setItem("crypto", JSON.stringify(crypto));
+    }
+  }, [crypto, isHydrated]);
 
   const removeStock = (symbol) => setStocks(stocks.filter(s => s !== symbol));
   const removeCrypto = (id) => setCrypto(crypto.filter(c => c !== id));
@@ -45,39 +54,64 @@ export default function HomePage() {
       <CryptoSearch crypto={crypto} setCrypto={setCrypto} removeCrypto={removeCrypto} />
 
       {/* ---- Prices ---- */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4 text-black">Prices</h2>
-        <button
-          onClick={() => {
-            fetchPrices();
-            fetchGoldPrice();
-          }}
-          className="mb-4 bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600"
-        >
-          Refresh Prices
-        </button>
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-black">Prices</h2>
+          <button
+            onClick={() => {
+              fetchPrices();
+              fetchGoldPrice();
+            }}
+            disabled={loading || loadingGold}
+            className={`bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 transition-opacity ${(loading || loadingGold) ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            {loading || loadingGold ? "Refreshing..." : "Refresh Prices"}
+          </button>
+        </div>
 
         {/* Gold Price Card */}
-        {goldPrice.price && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <PriceCard symbol="XAU/USD" name="Gold" price={goldPrice.price} currency={goldPrice.currency} />
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="font-medium text-gray-700">Gold Market</span>
+            {loadingGold && <span className="text-xs text-indigo-500 animate-pulse">(Scraping gold price...)</span>}
           </div>
-        )}
-
-        {/* Crypto Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {prices?.crypto && Object.entries(prices.crypto).map(([id, val]) => (
-            <PriceCard key={id} symbol={id} name={id} price={`${val.usd} USD`} />
-          ))}
+          {goldPrice.price ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <PriceCard symbol="XAU/USD" name="Gold" price={goldPrice.price.toLocaleString()} currency={goldPrice.currency} />
+            </div>
+          ) : loadingGold ? (
+            <div className="text-gray-400 italic text-sm animate-pulse">Launching browser... please wait</div>
+          ) : (
+            <div className="text-gray-400 italic text-sm">No gold price data</div>
+          )}
         </div>
 
-        {/* Stock Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {prices?.stocks?.map(s => (
-            <PriceCard key={s.symbol} symbol={s.symbol} name={s.symbol} price={s.price} currency={s.currency} />
-          ))}
+        {/* Assets & Crypto */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="font-medium text-gray-700">Stock & Crypto Market</span>
+            {loading && <span className="text-xs text-indigo-500 animate-pulse">(Updating prices...)</span>}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Crypto Cards */}
+            {prices?.crypto && Object.entries(prices.crypto).map(([id, val]) => (
+              <PriceCard key={id} symbol={id} name={id.toUpperCase()} price={`${val.usd?.toLocaleString() || "0"} USD`} />
+            ))}
+
+            {/* Stock Cards */}
+            {prices?.stocks?.map(s => (
+              <PriceCard key={s.symbol} symbol={s.symbol} name={s.symbol} price={s.price?.toLocaleString() || "N/A"} currency={s.currency} />
+            ))}
+          </div>
+
+          {!loading && !prices?.crypto && (!prices?.stocks || prices.stocks.length === 0) && (
+            <div className="text-gray-400 italic text-sm">Add some assets to see prices</div>
+          )}
         </div>
       </div>
+
+      <DiscordNotifier stocks={stocks} crypto={crypto} />
     </div>
   );
 }
