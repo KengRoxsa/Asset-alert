@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "vercel-build": "node src/lib/scripts/installChromium.js && next build",
+    "vercel-build": "node scripts/installChromium.js && next build",
     "build": "next build"
   },
   "dependencies": {
