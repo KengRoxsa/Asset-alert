@@ -4,9 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
-    "start": "next start",
-    "vercel-build": "node ./src/lib/scripts/installChromium.js"
+    "vercel-build": "node src/lib/scripts/installChromium.js && next build",
+    "build": "next build"
   },
   "dependencies": {
     "@sparticuz/chromium": "^138.0.2",
