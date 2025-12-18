@@ -2,23 +2,27 @@ import { NextResponse } from "next/server";
 
 export function middleware(request) {
     const { nextUrl } = request;
+    const secret = nextUrl.searchParams.get("secret");
 
-    // Explicitly skip authentication for ALL API routes
-    if (nextUrl.pathname.startsWith('/api')) {
+    // 🤖 VIP Pass: If the secret matches our CRON_SECRET, or it's an API route, let it pass Basic Auth!
+    if (
+        (secret && secret === process.env.CRON_SECRET) ||
+        nextUrl.pathname.startsWith('/api')
+    ) {
         return NextResponse.next();
     }
 
-    const basicAuth = request.headers.get("authorization");
-
-    // Only protect if APP_PASSWORD is set in Vercel
+    // 🔒 Basic Auth Protection for the dashboard
     const adminPassword = process.env.APP_PASSWORD;
 
     if (adminPassword) {
+        const basicAuth = request.headers.get("authorization");
         if (basicAuth) {
             try {
                 const authValue = basicAuth.split(" ")[1];
-                // Using atob for Edge Runtime compatibility
-                const [user, pwd] = atob(authValue).split(":");
+                // Edge-compatible base64 decoding
+                const decoded = atob(authValue);
+                const [user, pwd] = decoded.split(":");
 
                 const adminUser = process.env.APP_USER || "admin";
 
@@ -42,5 +46,5 @@ export function middleware(request) {
 }
 
 export const config = {
-    matcher: ["/((?!api/|_next/static|_next/image|favicon.ico).*)"],
+    matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
