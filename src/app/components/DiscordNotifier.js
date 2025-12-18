@@ -1,11 +1,8 @@
 "use client";
 import React, { useState } from "react";
-import { useSearchParams } from "next/navigation"; // Added import for useSearchParams
-
 const DiscordNotifier = ({ stocks, crypto }) => {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState(null);
-    const searchParams = useSearchParams(); // Initialized useSearchParams
 
     const sendToDiscord = async () => {
         setLoading(true);
