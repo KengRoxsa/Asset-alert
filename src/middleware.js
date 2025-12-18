@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 
 export function middleware(request) {
+    const { nextUrl } = request;
+
+    // Explicitly skip authentication for ALL API routes
+    if (nextUrl.pathname.startsWith('/api')) {
+        return NextResponse.next();
+    }
+
     const basicAuth = request.headers.get("authorization");
 
     // Only protect if APP_PASSWORD is set in Vercel
