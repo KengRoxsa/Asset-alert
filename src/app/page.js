@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import usePriceFetching from "./hooks/usePriceFetching";
 import StockSearch from "./components/StockSearch";
 import CryptoSearch from "./components/CryptoSearch";
@@ -111,7 +111,9 @@ export default function HomePage() {
         </div>
       </div>
 
-      <DiscordNotifier stocks={stocks} crypto={crypto} />
+      <Suspense fallback={<div>Loading components...</div>}>
+        <DiscordNotifier stocks={stocks} crypto={crypto} />
+      </Suspense>
     </div>
   );
 }
