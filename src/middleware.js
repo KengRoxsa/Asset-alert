@@ -3,17 +3,23 @@ import { NextResponse } from "next/server";
 export function middleware(request) {
     const basicAuth = request.headers.get("authorization");
 
-    if (process.env.APP_PASSWORD) {
+    // Only protect if APP_PASSWORD is set in Vercel
+    const adminPassword = process.env.APP_PASSWORD;
+
+    if (adminPassword) {
         if (basicAuth) {
-            const authValue = basicAuth.split(" ")[1];
-            const [user, pwd] = Buffer.from(authValue, "base64").toString().split(":");
+            try {
+                const authValue = basicAuth.split(" ")[1];
+                // Using atob for Edge Runtime compatibility
+                const [user, pwd] = atob(authValue).split(":");
 
-            // Use defaults if not set, or specific ENV values
-            const adminUser = process.env.APP_USER || "admin";
-            const adminPassword = process.env.APP_PASSWORD;
+                const adminUser = process.env.APP_USER || "admin";
 
-            if (user === adminUser && pwd === adminPassword) {
-                return NextResponse.next();
+                if (user === adminUser && pwd === adminPassword) {
+                    return NextResponse.next();
+                }
+            } catch (e) {
+                console.error("Auth parsing error", e);
             }
         }
 
