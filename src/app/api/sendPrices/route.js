@@ -11,19 +11,42 @@ const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL;
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-
-    // Security check (Optional but recommended for automated jobs)
-    const secret = searchParams.get("secret");
-    if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-    }
-
     const stocksParam = searchParams.get("stocks");
     const cryptoParam = searchParams.get("crypto");
+    const secret = searchParams.get("secret");
 
-    // Use params if provided, otherwise fallback to defaults for automated alerts
-    const stocksToFetch = stocksParam ? stocksParam.split(",") : (process.env.DEFAULT_STOCKS?.split(",") || ["AAPL", "GOOGL", "MSFT"]);
-    const cryptosToFetch = cryptoParam ? cryptoParam.split(",") : (process.env.DEFAULT_CRYPTO?.split(",") || ["bitcoin", "ethereum", "dogecoin"]);
+    // 🔒 Security: Only enforce secret if it's an automated call (no params provided)
+    // If it's a manual call from the dashboard (params provided), we assume the user is already authenticated via Basic Auth on the frontend.
+    const isAutomated = !stocksParam && !cryptoParam;
+
+    if (isAutomated && process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
+      return new Response(JSON.stringify({ error: "Unauthorized. Secret required for automation." }), { status: 401 });
+    }
+
+    let stocksToFetch = [];
+    let cryptosToFetch = [];
+
+    if (stocksParam || cryptoParam) {
+      // Manual trigger from Dashboard
+      stocksToFetch = stocksParam ? stocksParam.split(",") : [];
+      cryptosToFetch = cryptoParam ? cryptoParam.split(",") : [];
+    } else {
+      // 🤖 Automated trigger: Try KV first, then fallback to Env
+      try {
+        const savedConfig = await kv.get("alert_config");
+        if (savedConfig && savedConfig.stocks) {
+          stocksToFetch = savedConfig.stocks;
+          cryptosToFetch = savedConfig.crypto;
+        } else {
+          stocksToFetch = process.env.DEFAULT_STOCKS?.split(",") || ["AAPL", "GOOGL", "MSFT"];
+          cryptosToFetch = process.env.DEFAULT_CRYPTO?.split(",") || ["bitcoin", "ethereum", "dogecoin"];
+        }
+      } catch (kvError) {
+        console.error("KV fetch error, falling back to ENV:", kvError);
+        stocksToFetch = process.env.DEFAULT_STOCKS?.split(",") || ["AAPL", "GOOGL", "MSFT"];
+        cryptosToFetch = process.env.DEFAULT_CRYPTO?.split(",") || ["bitcoin", "ethereum", "dogecoin"];
+      }
+    }
 
     // Fetch prices
     const stocks = stocksToFetch.length > 0 ? await fetchStockPrices(stocksToFetch) : [];
