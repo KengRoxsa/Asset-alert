@@ -1,4 +1,5 @@
 import axios from "axios";
+import { kv } from "@vercel/kv";
 import { fetchStockPrices, fetchCryptoPrices } from "../../../lib/priceAPI";
 import { fetchGoldPrice } from "../../../lib/fetchGoldServer";
 
