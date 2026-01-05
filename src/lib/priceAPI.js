@@ -65,28 +65,49 @@ export async function fetchCryptoPrices(cryptos) {
 
   const results = {};
 
+  // Helper to fetch from Binance with fallback
+  const fetchBinancePrice = async (symbol) => {
+    // Try Global API first
+    try {
+      const { statusCode, body } = await request(
+        `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`
+      );
+      if (statusCode === 200) {
+        return await body.json();
+      }
+    } catch (e) {
+      // Ignore and try fallback 
+    }
+
+    // Fallback to Binance US (for Vercel Servers in US)
+    try {
+      const { statusCode, body } = await request(
+        `https://api.binance.us/api/v3/ticker/price?symbol=${symbol}`
+      );
+      if (statusCode === 200) {
+        return await body.json();
+      }
+    } catch (e) {
+      console.warn(`Binance US fallback failed for ${symbol}:`, e.message);
+    }
+    return null;
+  };
+
   // Binance Public API is fast and has high limits, so we can fetch individually in parallel
   const promises = cryptos.map(async (id) => {
     try {
       // 1. Resolve Symbol
       const symbol = SYMBOL_MAP[id.toLowerCase()] || `${id.toUpperCase()}USDT`;
 
-      // 2. Fetch from Binance
-      const { statusCode, body } = await request(
-        `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`
-      );
-
-      if (statusCode !== 200) {
-        console.warn(`Binance fetch failed for ${id} (${symbol}): ${statusCode}`);
-        return;
-      }
-
-      const data = await body.json(); // { symbol: "BTCUSDT", price: "95000.00" }
+      // 2. Fetch from Binance (with Fallback)
+      const data = await fetchBinancePrice(symbol);
 
       if (data && data.price) {
         results[id] = {
           usd: parseFloat(data.price),
         };
+      } else {
+        console.warn(`Failed to fetch price for ${id} (${symbol}) from both Binance Global and US.`);
       }
     } catch (err) {
       console.warn(`Error fetching ${id} from Binance:`, err.message);
