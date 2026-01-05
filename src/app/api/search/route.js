@@ -2,29 +2,38 @@
 import yahooFinance from "yahoo-finance2";
 import { request } from "undici";
 
-// --- Simple in-memory cache for CoinGecko coin list ---
-let coinListCache = null;
-let coinListLastFetch = 0;
-const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
+// --- Curated List for Search (High Stability) ---
+const TOP_COINS = [
+  { id: "bitcoin", symbol: "btc", name: "Bitcoin" },
+  { id: "ethereum", symbol: "eth", name: "Ethereum" },
+  { id: "dogecoin", symbol: "doge", name: "Dogecoin" },
+  { id: "binancecoin", symbol: "bnb", name: "BNB" },
+  { id: "solana", symbol: "sol", name: "Solana" },
+  { id: "ripple", symbol: "xrp", name: "XRP" },
+  { id: "cardano", symbol: "ada", name: "Cardano" },
+  { id: "avalanche-2", symbol: "avax", name: "Avalanche" },
+  { id: "polkadot", symbol: "dot", name: "Polkadot" },
+  { id: "tron", symbol: "trx", name: "TRON" },
+  { id: "chainlink", symbol: "link", name: "Chainlink" },
+  { id: "matic-network", symbol: "matic", name: "Polygon" },
+  { id: "shiba-inu", symbol: "shib", name: "Shiba Inu" },
+  { id: "litecoin", symbol: "ltc", name: "Litecoin" },
+  { id: "bitcoin-cash", symbol: "bch", name: "Bitcoin Cash" },
+  { id: "uniswap", symbol: "uni", name: "Uniswap" },
+  { id: "stellar", symbol: "xlm", name: "Stellar" },
+  { id: "monero", symbol: "xmr", name: "Monero" },
+  { id: "ethereum-classic", symbol: "etc", name: "Ethereum Classic" },
+  { id: "cosmos", symbol: "atom", name: "Cosmos" },
+  { id: "pepe", symbol: "pepe", name: "Pepe" },
+  { id: "floki", symbol: "floki", name: "Floki" },
+  { id: "notcoin", symbol: "not", name: "Notcoin" },
+  { id: "near", symbol: "near", name: "NEAR Protocol" },
+  { id: "aptos", symbol: "apt", name: "Aptos" },
+];
 
 async function getCoinList() {
-  const now = Date.now();
-  if (coinListCache && now - coinListLastFetch < CACHE_DURATION) {
-    return coinListCache;
-  }
-
-  try {
-    const { body } = await request("https://api.coingecko.com/api/v3/coins/list");
-    const allCoins = await body.json();
-    coinListCache = allCoins;
-    coinListLastFetch = now;
-    return coinListCache;
-  } catch (error) {
-    console.error("Failed to fetch CoinGecko coin list:", error);
-    // Return stale cache if available, otherwise throw
-    if (coinListCache) return coinListCache;
-    throw error;
-  }
+  // Return static list immediately
+  return TOP_COINS;
 }
 
 export async function GET(req) {
@@ -43,11 +52,25 @@ export async function GET(req) {
     let suggestions = [];
 
     if (type === "stock") {
-      const results = await yahooFinance.search(query);
-      suggestions = results.quotes.slice(0, 5).map((q) => ({
-        symbol: q.symbol,
-        name: q.shortname || q.longname || q.symbol,
-      }));
+      try {
+        const results = await yahooFinance.search(query, {
+          quotesCount: 5,
+          newsCount: 0,
+        });
+
+        if (!results.quotes || results.quotes.length === 0) {
+          console.log(`Stock search empty for: ${query}`);
+        }
+
+        suggestions = results.quotes.map((q) => ({
+          symbol: q.symbol,
+          name: q.shortname || q.longname || q.symbol,
+        }));
+      } catch (stockErr) {
+        console.error("Yahoo Finance Search Error:", stockErr.message);
+        // Fallback or just return empty
+        suggestions = [];
+      }
     } else if (type === "crypto") {
       const allCoins = await getCoinList();
       const lowerCaseQuery = query.toLowerCase();
