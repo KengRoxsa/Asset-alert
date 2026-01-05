@@ -1,5 +1,5 @@
 // lib/priceAPI.js
-import yahooFinance from "yahoo-finance2";
+// import yahooFinance from "yahoo-finance2"; // Removed unused import
 import { request } from "undici";
 import axios from "axios";
 
