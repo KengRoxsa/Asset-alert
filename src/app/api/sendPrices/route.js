@@ -72,7 +72,8 @@ export async function GET(request) {
     });
 
     if (missingAssets.length > 0) {
-      throw new Error(`Failed to fetch prices for: ${missingAssets.join(", ")}. Please try refreshing the dashboard first.`);
+      console.warn(`Some prices could not be fetched: ${missingAssets.join(", ")}`);
+      // We'll still proceed to show what we HAVE fetched
     }
 
     // Create message (Ultra-simple format: All in one line)

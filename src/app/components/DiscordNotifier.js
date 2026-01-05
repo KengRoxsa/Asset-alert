@@ -16,12 +16,27 @@ const DiscordNotifier = ({ stocks, crypto }) => {
             const stockQuery = stocks.join(",");
             const cryptoQuery = crypto.join(",");
             const res = await fetch(`/api/sendPrices?stocks=${encodeURIComponent(stockQuery)}&crypto=${encodeURIComponent(cryptoQuery)}`);
-            const data = await res.json();
-            if (res.ok) {
-                setStatus({ type: "success", message: "Sent to Discord successfully!" });
-            } else {
-                setStatus({ type: "error", message: data.error || "Failed to send to Discord" });
+
+            if (!res.ok) {
+                const text = await res.text();
+                // Determine if it was rate limited or another error
+                let errorMessage = `Failed to send to Discord (${res.status})`;
+                if (res.status === 429) {
+                    errorMessage = "Too Many Requests (Rate Limited)! Try again later.";
+                } else if (text) {
+                    try {
+                        const jsonErr = JSON.parse(text);
+                        errorMessage = jsonErr.error || errorMessage;
+                    } catch {
+                        errorMessage = `${errorMessage}: ${text.slice(0, 100)}`; // limit error length
+                    }
+                }
+                setStatus({ type: "error", message: errorMessage });
+                return;
             }
+
+            const data = await res.json();
+            setStatus({ type: "success", message: "Sent to Discord successfully!" });
         } catch (err) {
             setStatus({ type: "error", message: "Network error occurred" });
         } finally {

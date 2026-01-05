@@ -22,12 +22,29 @@ export async function fetchStockPrices(stocks) {
  */
 export async function fetchCryptoPrices(cryptos) {
   if (!cryptos || cryptos.length === 0) return {};
-  const { body } = await request(
-    `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(
-      cryptos.join(",")
-    )}&vs_currencies=usd`
-  );
-  return await body.json();
+  try {
+    const { statusCode, body } = await request(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(
+        cryptos.join(",")
+      )}&vs_currencies=usd`
+    );
+
+    if (statusCode === 429) {
+      console.warn("CoinGecko API Rate Limited (429).");
+      return {}; // Return empty to prevent crash
+    }
+
+    if (statusCode !== 200) {
+      const text = await body.text();
+      console.error(`CoinGecko API Error (${statusCode}):`, text);
+      return {};
+    }
+
+    return await body.json();
+  } catch (err) {
+    console.error("Error fetching crypto prices:", err.message);
+    return {};
+  }
 }
 
 /**

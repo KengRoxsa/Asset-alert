@@ -12,12 +12,18 @@ const usePriceFetching = (stocks, crypto) => {
     setLoadingGold(true);
     try {
       const res = await fetch("/api/gold");
-      const data = await res.json();
-      if (res.ok) {
-        setGoldPrice({ price: data.price, currency: data.currency });
-      } else {
-        console.error("Error fetching gold price:", data.error);
+      if (!res.ok) {
+        const text = await res.text();
+        if (res.status === 429) {
+          console.warn("Rate limited (429) while fetching gold price:", text);
+          // Optional: handle rate limit UI
+        } else {
+          console.error(`Error fetching gold price (${res.status}):`, text);
+        }
+        return; // Exit early
       }
+      const data = await res.json();
+      setGoldPrice({ price: data.price, currency: data.currency });
     } catch (err) {
       console.error("Error fetching gold price:", err);
     } finally {
@@ -33,6 +39,17 @@ const usePriceFetching = (stocks, crypto) => {
       const res = await fetch(
         `/api/prices?stocks=${encodeURIComponent(stockQueryParam)}&crypto=${encodeURIComponent(cryptoQueryParam)}`
       );
+
+      if (!res.ok) {
+        const text = await res.text();
+        if (res.status === 429) {
+          console.warn("Rate limited (429) while fetching prices:", text);
+        } else {
+          console.error(`Error fetching prices (${res.status}):`, text);
+        }
+        return; // Exit early
+      }
+
       const data = await res.json();
       setPrices(data);
     } catch (err) {
